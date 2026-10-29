@@ -1,0 +1,11 @@
+const router=require("express").Router(); const supabase=require("../supabase"); const {requireAuth,requireRole}=require("../middleware/auth");
+router.get("/",requireAuth,requireRole("warden"),async(req,res,next)=>{try{const {data,error}=await supabase.from("allocations").select("id,allocated_at,status,users!allocations_student_id_fkey(name,email),rooms!allocations_room_id_fkey(room_number,block)").eq("status","active").order("allocated_at",{ascending:false});if(error)return next(error);res.json({allocations:data.map(a=>({id:a.id,allocated_at:a.allocated_at,status:a.status,student_name:a.users?.name,email:a.users?.email,room_number:a.rooms?.room_number,block:a.rooms?.block}))})}catch(e){next(e)}});
+router.post("/",requireAuth,requireRole("student"),async(req,res,next)=>{try{
+ const roomId=req.body.room_id;
+ const {data:existing}=await supabase.from("allocations").select("id").eq("student_id",req.user.id).eq("status","active").maybeSingle(); if(existing)return res.status(409).json({message:"You already have an active room allocation."});
+ const {data:room}=await supabase.from("rooms").select("id,capacity").eq("id",roomId).maybeSingle(); if(!room)return res.status(404).json({message:"Room not found."});
+ const {count}=await supabase.from("allocations").select("id",{count:"exact",head:true}).eq("room_id",roomId).eq("status","active"); if(count>=room.capacity)return res.status(409).json({message:"That room is already full."});
+ const {data,error}=await supabase.from("allocations").insert({student_id:req.user.id,room_id:roomId,status:"active"}).select().single();if(error)return next(error);res.status(201).json({allocation:data});
+ }catch(e){next(e)}});
+router.delete("/:id",requireAuth,requireRole("warden"),async(req,res,next)=>{try{const {error}=await supabase.from("allocations").update({status:"released",released_at:new Date().toISOString()}).eq("id",req.params.id).eq("status","active");if(error)return next(error);res.json({message:"Allocation released."})}catch(e){next(e)}});
+module.exports=router;

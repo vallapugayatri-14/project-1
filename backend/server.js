@@ -1,0 +1,14 @@
+require("dotenv").config();
+const express=require("express"),path=require("path"),helmet=require("helmet"),rateLimit=require("express-rate-limit");
+const authRoutes=require("./routes/auth"),dashboardRoutes=require("./routes/dashboard"),roomRoutes=require("./routes/rooms").router,allocationRoutes=require("./routes/allocations"),maintenanceRoutes=require("./routes/maintenance");
+const app=express();
+app.use(helmet({contentSecurityPolicy:false}));
+app.use(express.json({limit:"50kb"}));
+app.use(rateLimit({windowMs:15*60*1000,max:300,standardHeaders:true,legacyHeaders:false}));
+app.use(express.static(path.join(__dirname,"..","frontend")));
+app.get("/api/health",(req,res)=>res.json({status:"ok",service:"hostelhub"}));
+app.use("/api/auth",authRoutes);app.use("/api/dashboard",dashboardRoutes);app.use("/api/rooms",roomRoutes);app.use("/api/allocations",allocationRoutes);app.use("/api/maintenance",maintenanceRoutes);
+app.use("/api/*splat",(req,res)=>res.status(404).json({message:"API route not found."}));
+app.get("/{*splat}",(req,res)=>res.sendFile(path.join(__dirname,"..","frontend","index.html")));
+app.use((err,req,res,next)=>{console.error(err);res.status(500).json({message:"Something went wrong on the server."})});
+const port=Number(process.env.PORT||3000);app.listen(port,()=>console.log(`HostelHub running at http://localhost:${port}`));

@@ -1,0 +1,12 @@
+const router=require("express").Router(); const supabase=require("../supabase"); const {requireAuth,requireRole}=require("../middleware/auth"); const {cleanString}=require("../utils/validation");
+async function roomList(){
+ const {data,error}=await supabase.from("rooms").select("id,room_number,block,capacity,created_at").order("block").order("room_number");
+ if(error)throw error;
+ const {data:allocs,error:ae}=await supabase.from("allocations").select("room_id").eq("status","active"); if(ae)throw ae;
+ return data.map(r=>{const occupied=(allocs||[]).filter(a=>a.room_id===r.id).length;return {...r,occupied_beds:occupied,status:occupied<r.capacity?"available":"full"}});
+}
+router.get("/",requireAuth,async(req,res,next)=>{try{res.json({rooms:await roomList()})}catch(e){next(e)}});
+router.post("/",requireAuth,requireRole("warden"),async(req,res,next)=>{try{const room_number=cleanString(req.body.room_number,20),block=cleanString(req.body.block,50),capacity=Number(req.body.capacity);if(!room_number||!block||!Number.isInteger(capacity)||capacity<1||capacity>10)return res.status(400).json({message:"Enter valid room number, block, and capacity."});const {data,error}=await supabase.from("rooms").insert({room_number,block,capacity}).select().single();if(error)return next(error);res.status(201).json({room:data})}catch(e){next(e)}});
+router.patch("/:id",requireAuth,requireRole("warden"),async(req,res,next)=>{try{const patch={};if(req.body.room_number!==undefined)patch.room_number=cleanString(req.body.room_number,20);if(req.body.block!==undefined)patch.block=cleanString(req.body.block,50);if(req.body.capacity!==undefined){const c=Number(req.body.capacity);if(!Number.isInteger(c)||c<1||c>10)return res.status(400).json({message:"Capacity must be between 1 and 10."});patch.capacity=c}const {data,error}=await supabase.from("rooms").update(patch).eq("id",req.params.id).select().single();if(error)return next(error);res.json({room:data})}catch(e){next(e)}});
+router.delete("/:id",requireAuth,requireRole("warden"),async(req,res,next)=>{try{const {count,error:ce}=await supabase.from("allocations").select("id",{count:"exact",head:true}).eq("room_id",req.params.id).eq("status","active");if(ce)return next(ce);if(count)return res.status(409).json({message:"Cannot delete a room with an active allocation."});const {error}=await supabase.from("rooms").delete().eq("id",req.params.id);if(error)return next(error);res.json({message:"Room deleted."})}catch(e){next(e)}});
+module.exports={router,roomList};

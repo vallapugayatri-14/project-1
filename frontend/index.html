@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hostel Room Allocation & Maintenance Portal</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="toast" class="toast" aria-live="polite"></div>
+
+  <section id="authView" class="auth-shell">
+    <div class="auth-card">
+      <div class="brand-mark">H</div>
+      <h1>HostelHub</h1>
+      <p class="muted">Room allocation and maintenance made simple.</p>
+
+      <div class="tabs">
+        <button class="tab active" data-auth-tab="login">Login</button>
+        <button class="tab" data-auth-tab="register">Register</button>
+      </div>
+
+      <form id="loginForm" class="auth-form">
+        <label>Email<input type="email" id="loginEmail" required></label>
+        <label>Password<input type="password" id="loginPassword" required minlength="6"></label>
+        <button class="btn primary full" type="submit">Login</button>
+      </form>
+
+      <form id="registerForm" class="auth-form hidden">
+        <label>Full name<input type="text" id="registerName" required maxlength="80"></label>
+        <label>Email<input type="email" id="registerEmail" required></label>
+        <label>Password<input type="password" id="registerPassword" required minlength="6"></label>
+        <label>Role
+          <select id="registerRole">
+            <option value="student">Student</option>
+            <option value="warden">Warden</option>
+          </select>
+        </label>
+        <button class="btn primary full" type="submit">Create account</button>
+        <p class="small muted">For a real college deployment, warden/admin accounts should be created by an administrator.</p>
+      </form>
+    </div>
+  </section>
+
+  <section id="appView" class="app-shell hidden">
+    <aside class="sidebar">
+      <div class="logo"><span>H</span> HostelHub</div>
+      <nav>
+        <button class="nav-link active" data-page="dashboard">Dashboard</button>
+        <button class="nav-link student-only" data-page="rooms">Rooms</button>
+        <button class="nav-link" data-page="maintenance">Maintenance</button>
+        <button class="nav-link warden-only" data-page="allocations">Allocations</button>
+        <button class="nav-link warden-only" data-page="manage-rooms">Manage Rooms</button>
+      </nav>
+      <div class="sidebar-bottom">
+        <div id="userBadge" class="user-badge"></div>
+        <button id="logoutBtn" class="btn outline full">Logout</button>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <h2 id="pageTitle">Dashboard</h2>
+          <p id="pageSubtitle" class="muted">Welcome to your hostel portal.</p>
+        </div>
+        <div class="status-dot"><span></span> System online</div>
+      </header>
+
+      <section id="page-dashboard" class="page active">
+        <div id="dashboardStats" class="stats-grid"></div>
+        <div class="two-col">
+          <div class="panel">
+            <div class="panel-head"><h3>Recent maintenance requests</h3><button class="text-btn" data-page="maintenance">View all</button></div>
+            <div id="recentMaintenance"></div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h3>Room overview</h3></div>
+            <div id="roomOverview"></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="page-rooms" class="page">
+        <div class="toolbar">
+          <input id="roomSearch" placeholder="Search room number or block">
+          <select id="roomStatusFilter"><option value="">All statuses</option><option value="available">Available</option><option value="full">Full</option></select>
+        </div>
+        <div id="roomsGrid" class="room-grid"></div>
+      </section>
+
+      <section id="page-maintenance" class="page">
+        <div class="toolbar">
+          <select id="maintenanceFilter">
+            <option value="">All requests</option><option value="pending">Pending</option><option value="in_progress">In progress</option><option value="resolved">Resolved</option>
+          </select>
+          <button id="newRequestBtn" class="btn primary student-only">+ New request</button>
+        </div>
+        <div class="panel table-wrap"><table><thead><tr><th>Issue</th><th>Room</th><th>Priority</th><th>Status</th><th>Created</th><th>Action</th></tr></thead><tbody id="maintenanceTable"></tbody></table></div>
+      </section>
+
+      <section id="page-allocations" class="page">
+        <div class="toolbar"><input id="allocationSearch" placeholder="Search student or room"></div>
+        <div class="panel table-wrap"><table><thead><tr><th>Student</th><th>Email</th><th>Room</th><th>Block</th><th>Allocated</th><th>Action</th></tr></thead><tbody id="allocationTable"></tbody></table></div>
+      </section>
+
+      <section id="page-manage-rooms" class="page">
+        <div class="toolbar"><button id="addRoomBtn" class="btn primary">+ Add room</button></div>
+        <div class="panel table-wrap"><table><thead><tr><th>Room</th><th>Block</th><th>Capacity</th><th>Occupied</th><th>Status</th><th>Action</th></tr></thead><tbody id="manageRoomsTable"></tbody></table></div>
+      </section>
+    </main>
+  </section>
+
+  <dialog id="requestDialog">
+    <form id="requestForm" method="dialog" class="dialog-card">
+      <div class="panel-head"><h3>New maintenance request</h3><button type="button" class="icon-btn" data-close="requestDialog">×</button></div>
+      <label>Room<select id="requestRoom" required></select></label>
+      <label>Issue title<input id="requestTitle" maxlength="120" required></label>
+      <label>Description<textarea id="requestDescription" rows="4" maxlength="1000" required></textarea></label>
+      <label>Priority<select id="requestPriority"><option value="low">Low</option><option value="medium" selected>Medium</option><option value="high">High</option></select></label>
+      <div class="dialog-actions"><button type="button" class="btn outline" data-close="requestDialog">Cancel</button><button class="btn primary">Submit request</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="roomDialog">
+    <form id="roomForm" method="dialog" class="dialog-card">
+      <div class="panel-head"><h3 id="roomDialogTitle">Add room</h3><button type="button" class="icon-btn" data-close="roomDialog">×</button></div>
+      <input type="hidden" id="editRoomId">
+      <label>Room number<input id="roomNumber" maxlength="20" required></label>
+      <label>Block<input id="roomBlock" maxlength="50" required></label>
+      <label>Capacity<input id="roomCapacity" type="number" min="1" max="10" value="2" required></label>
+      <div class="dialog-actions"><button type="button" class="btn outline" data-close="roomDialog">Cancel</button><button class="btn primary">Save room</button></div>
+    </form>
+  </dialog>
+
+  <script src="app.js"></script>
+</body>
+</html>
